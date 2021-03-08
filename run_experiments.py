@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 import argparse as ap
+import enum
 import json
 import logging
 import multiprocessing
 import os
+import queue as Queue
 import re
 import shlex
 import shutil
@@ -11,6 +13,7 @@ import subprocess as sp
 import sys
 import tarfile
 import tempfile
+import threading
 import zipfile
 from collections import Counter
 from datetime import timedelta
@@ -39,7 +42,27 @@ def load_config(config_path: str) -> dict:
     return config_dict
 
 
-def run_command(cmd: Union[str, Sequence[str]], print_error: bool = True,
+def read_output_from_pipe(pipe, line_consumers):
+    for line in iter(pipe.readline, ""):
+        for consumer in line_consumers:
+            consumer(line)
+    pipe.close()
+
+
+def stdout_print_queue_consumer(qgetfn):
+    for line in iter(qgetfn, None):
+        sys.stdout.write(line)
+        sys.stdout.flush()
+
+
+class PrintPolicy(enum.Enum):
+    Nothing = 1  # stderr and stdout are not printed, just aggregated
+    OnlyErrors = 2  # prints the aggregated stderr if the return code is non-zero
+    StreamEverything = 3  # prints stdout and stderr as soon as a line is available
+
+
+def run_command(cmd: Union[str, Sequence[str]],
+                print_policy: PrintPolicy = PrintPolicy.OnlyErrors,
                 cwd: Optional[str] = None,
                 env: Optional[Mapping[str, str]] = None,
                 shell: bool = False) -> Tuple[int, str, str]:
@@ -49,12 +72,35 @@ def run_command(cmd: Union[str, Sequence[str]], print_error: bool = True,
                         stderr=sp.PIPE, cwd=cwd, env=env, shell=shell,
                         encoding="utf-8", universal_newlines=True,
                         errors="ignore")
-        stdout, stderr = proc.communicate()
+        captured_output_queue = Queue.Queue()
+        captured_out, captured_err = [], []
+        out_capture_thread = threading.Thread(
+            target=read_output_from_pipe,
+            args=(proc.stdout, [captured_output_queue.put, captured_out.append]),
+        )
+        err_capture_thread = threading.Thread(
+            target=read_output_from_pipe,
+            args=(proc.stderr, [captured_output_queue.put, captured_err.append]),
+        )
+        streaming = print_policy == PrintPolicy.StreamEverything
+        unqueue_captured_output_thread = threading.Thread(
+            target=stdout_print_queue_consumer if streaming else lambda fn: None,
+            args=(captured_output_queue.get,),
+        )
+        for thread in (out_capture_thread, err_capture_thread, unqueue_captured_output_thread):
+            thread.daemon = True
+            thread.start()
+        proc.wait()
+        out_capture_thread.join()
+        err_capture_thread.join()
+        captured_output_queue.put(None)  # send end sentinel
+        unqueue_captured_output_thread.join()  # wait until it receives the sentinel
+        stdout = "".join(captured_out)
+        stderr = "".join(captured_err)
         retcode = proc.returncode
     except FileNotFoundError:
-        retcode = 2
-        stdout, stderr = "", ""
-    if retcode != 0 and print_error:
+        retcode, stdout, stderr = 2, "", ""
+    if retcode != 0 and print_policy == PrintPolicy.OnlyErrors:
         output = stderr if stderr else stdout
         logging.error("%s\n", str(output))
     return retcode, stdout, stderr
