@@ -108,7 +108,7 @@ def run_command(cmd: Union[str, Sequence[str]],
 
 def count_lines(project: dict, project_dir: str) -> None:
     failed, stdout, _ = run_command(
-        'cloc "%s" --json --not-match-d="cc_results"' % project_dir, False)
+        'cloc "%s" --json --not-match-d="cc_results"' % project_dir)
     if not failed:
         try:
             cloc_json_out = json.loads(stdout)
@@ -177,7 +177,7 @@ def clone_project(project: dict, project_dir: str, source_dir: str,
                         project['tag']
 
     sys.stdout.flush()
-    clone_failed, _, clone_err = run_command(cmd['clone'], print_error=False)
+    clone_failed, _, clone_err = run_command(cmd['clone'], print_policy=PrintPolicy.Nothing)
     if clone_failed and 'master' in str(clone_err):
         clone_failed, _, _ = run_command(
             'git clone %s "%s"' % (project['url'], project_dir))
@@ -287,7 +287,7 @@ def log_project(project: dict, project_dir: str, num_jobs: int) -> bool:
         project['configure_command'] = \
             project['configure_command'].replace("$JOBS", str(num_jobs))
         _, _, _ = run_command(project['configure_command'],
-                              True, project_dir, shell=True, env=os.environ)
+                              cwd=project_dir, shell=True, env=os.environ)
     if 'make_command' in project:
         build_sys = 'userprovided'
     else:
@@ -299,11 +299,11 @@ def log_project(project: dict, project_dir: str, num_jobs: int) -> bool:
     if build_sys == 'cmake':
         cmd = 'cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -B"%s" -H"%s"' \
               % (binary_dir, project_dir)
-        failed, _, _ = run_command(cmd, True, binary_dir)
+        failed, _, _ = run_command(cmd, cwd=binary_dir)
     elif build_sys == 'makefile':
         cmd = "CodeChecker log -b 'make' -o \"%s\"" \
               % (json_path)
-        failed, _, _ = run_command(cmd, True, project_dir)
+        failed, _, _ = run_command(cmd, cwd=project_dir)
     elif build_sys == 'userprovided':
         if not project['make_command']:
             logging.info("[%s] 'make_command' is empty. Command invocation skipped.", project['name'])
@@ -312,7 +312,7 @@ def log_project(project: dict, project_dir: str, num_jobs: int) -> bool:
                 project['make_command'].replace("$JOBS", str(num_jobs))
             cmd = "CodeChecker log -b '%s' -o \"%s\"" \
                   % (project['make_command'], json_path)
-            failed, _, _ = run_command(cmd, True, project_dir, shell=True, env=os.environ)
+            failed, _, _ = run_command(cmd, True, cwd=project_dir, shell=True, env=os.environ)
     if failed:
         shutil.rmtree(project_dir)
         return False
@@ -341,13 +341,13 @@ def build_package(project: dict, project_dir: str, jobs: int) -> bool:
         run_command("vcpkg remove %s" % project["package"], True, project_dir)
         cmd = "CodeChecker log -b 'vcpkg install %s' -o \"%s\"" \
             % (project["package"], json_path)
-        failed, _, _ = run_command(cmd, True, project_dir)
+        failed, _, _ = run_command(cmd, cwd=project_dir)
         return not failed
     if project["package_type"] == "conan":
         run_command("conan install %s" % project["package"], True, project_dir)
         cmd = "CodeChecker log -b 'conan install %s --build' -o \"%s\"" \
             % (project["package"], json_path)
-        failed, _, _ = run_command(cmd, True, project_dir)
+        failed, _, _ = run_command(cmd, cwd=project_dir)
         return not failed
     logging.info("[%s] Unsupported package.", project['name'])
     return False
@@ -401,7 +401,7 @@ def check_project(project: dict, project_dir: str, config: dict,
         cmd += " --saargs %s " % filename
         cmd += " --skip %s " % skippath
         cmd += collect_args("analyze_args", conf_sources)
-        run_command(cmd, print_error=True, env=env)
+        run_command(cmd, env=env)
 
         logging.info("[%s] Done. Storing results...", name)
         if config["CodeChecker"]["url"]:
@@ -415,7 +415,6 @@ def check_project(project: dict, project_dir: str, config: dict,
         else:
             logging.info(
                 "[%s] Storing was skipped. There is no CodeChecker url.", name)
-
     os.remove(skippath)
 
 
@@ -599,7 +598,7 @@ def main():
     config = load_config(args.config)
     config["CodeChecker version"] = cc_ver
     script_dir = os.path.dirname(os.path.realpath(__file__))
-    _, out, _ = run_command("git rev-parse HEAD", False, cwd=script_dir)
+    _, out, _ = run_command("git rev-parse HEAD", cwd=script_dir)
     config["Script version"] = out
     config["Script args"] = " ".join(sys.argv)
     logging.info("Number of projects to process: %d.\n",
