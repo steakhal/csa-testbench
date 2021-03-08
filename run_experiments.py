@@ -62,7 +62,7 @@ class PrintPolicy(enum.Enum):
 
 
 def run_command(cmd: Union[str, Sequence[str]],
-                print_policy: PrintPolicy = PrintPolicy.OnlyErrors,
+                print_policy: PrintPolicy = PrintPolicy.StreamEverything,
                 cwd: Optional[str] = None,
                 env: Optional[Mapping[str, str]] = None,
                 shell: bool = False) -> Tuple[int, str, str]:
