@@ -339,13 +339,13 @@ def build_package(project: dict, project_dir: str, jobs: int) -> bool:
     json_path, _ = get_compilation_database(project, project_dir)
     if project["package_type"] == "vcpkg":
         run_command("vcpkg remove %s" % project["package"], True, project_dir)
-        cmd = "CodeChecker log -b 'vcpkg install %s' -o \"%s\"" \
+        cmd = "stdbuf -i0 -o0 -e0 CodeChecker log -b 'vcpkg install %s' -o \"%s\"" \
             % (project["package"], json_path)
         failed, _, _ = run_command(cmd, cwd=project_dir)
         return not failed
     if project["package_type"] == "conan":
         run_command("conan install %s" % project["package"], True, project_dir)
-        cmd = "CodeChecker log -b 'conan install %s --build' -o \"%s\"" \
+        cmd = "stdbuf -i0 -o0 -e0 CodeChecker log -b 'conan install %s --build' -o \"%s\"" \
             % (project["package"], json_path)
         failed, _, _ = run_command(cmd, cwd=project_dir)
         return not failed
@@ -395,7 +395,7 @@ def check_project(project: dict, project_dir: str, config: dict,
         _, version_string, _ = run_command("clang --version", env=env)
         run_config["analyzer_version"] = version_string
         analyzers = config["CodeChecker"].get("analyzers", "clangsa")
-        cmd = ("CodeChecker analyze '%s' -j%d -o '%s' -q " +
+        cmd = ("stdbuf -i0 -o0 -e0 CodeChecker analyze '%s' -j%d -o '%s' -q " +
                "--analyzers %s --capture-analysis-output") \
             % (json_path, num_jobs, result_path, analyzers)
         cmd += " --saargs %s " % filename
@@ -405,7 +405,7 @@ def check_project(project: dict, project_dir: str, config: dict,
 
         logging.info("[%s] Done. Storing results...", name)
         if config["CodeChecker"]["url"]:
-            cmd = "CodeChecker store '%s' --url '%s' -n %s " \
+            cmd = "stdbuf -i0 -o0 CodeChecker store '%s' --url '%s' -n %s " \
                   % (result_path, config["CodeChecker"]["url"], name)
             if tag:
                 cmd += " --tag %s " % tag
@@ -415,6 +415,7 @@ def check_project(project: dict, project_dir: str, config: dict,
         else:
             logging.info(
                 "[%s] Storing was skipped. There is no CodeChecker url.", name)
+
     os.remove(skippath)
 
 
@@ -482,7 +483,7 @@ def create_link(url: str, text: str) -> str:
 def post_process_project(project: dict, project_dir: str, config: dict,
                          printer: HTMLPrinter) -> int:
     _, stdout, _ = run_command(
-        "CodeChecker cmd runs --url %s -o json" % config['CodeChecker']['url'])
+        "stdbuf -i0 -o0 CodeChecker cmd runs --url %s -o json" % config['CodeChecker']['url'])
     runs = json.loads(stdout)
     project_stats = {}
     fatal_errors = 0
