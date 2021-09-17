@@ -266,7 +266,7 @@ def log_project(project: dict, project_dir: str, num_jobs: int) -> bool:
                 project['make_command'].replace("$JOBS", str(num_jobs))
             cmd = "CodeChecker log -b '%s' -o \"%s\"" \
                   % (project['make_command'], json_path)
-            failed, _, _ = run_command(cmd, True, project_dir, shell=True)
+            failed, _, _ = run_command(cmd, True, project_dir, shell=True, env=os.environ)
     if failed:
         shutil.rmtree(project_dir)
         return False
