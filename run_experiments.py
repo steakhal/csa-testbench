@@ -410,7 +410,7 @@ def check_project(project: dict, project_dir: str, config: dict,
             if tag:
                 cmd += " --tag %s " % tag
             cmd += collect_args("store_args", conf_sources)
-            run_command(cmd, print_error=True, env=env)
+            run_command(cmd, env=env)
             logging.info("[%s] Results stored.", name)
         else:
             logging.info(
