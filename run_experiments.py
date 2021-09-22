@@ -544,7 +544,7 @@ def main():
         _, cc_ver, _ = run_command("CodeChecker version")
     except OSError:
         logging.error("CodeChecker is not available as a command.")
-        sys.exit(1)
+        sys.exit(2)
 
     if args.jobs < 1:
         logging.error("Invalid number of jobs.")
@@ -591,7 +591,7 @@ def main():
                                                 printer)
             if fatal_errors > 0 and args.fail_on_assert:
                 logging.error('Stopping after assertion failure.')
-                sys.exit(1)
+                sys.exit(3)
 
     logged_projects = check_logged(projects_root, config['projects'])
     logging.info("\nNumber of analyzed projects: %d / %d\n"
@@ -600,6 +600,9 @@ def main():
                  logged_projects, len(config['projects']),
                  config['CodeChecker']['url'], stats_html)
 
+    if fatal_errors > 0:
+        logging.error('Some analyzed projects had assertion failures.')
+        sys.exit(4)
 
 if __name__ == '__main__':
     main()
