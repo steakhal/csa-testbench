@@ -103,7 +103,7 @@ def summ_stats_on_file(filename: str, stat_map: dict, per_helper: dict,
             stat_name = "Peak memory usage"
             stat_map[stat_name] = max(stat_map[stat_name], int(stat_val))
             continue
-        m = timer_pattern.search(line)
+        m = timer_pattern.search(line) if "analyzer total time" in line else None
         if m:
             val = float(m.group(1).strip())
             if "TU times" in stat_map:
