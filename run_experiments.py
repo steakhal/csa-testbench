@@ -562,6 +562,7 @@ def main():
     projects_root = os.path.abspath(args.output)
     make_dir(projects_root)
 
+    fatal_errors = 0
     stats_html = os.path.join(projects_root, "stats.html")
     with HTMLPrinter(stats_html, config) as printer:
 
