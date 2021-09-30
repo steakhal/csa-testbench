@@ -408,7 +408,8 @@ def process_failures(path: str, statistics: Optional[dict] = None) \
         "warnings": RegexStat(r'warning: (.+)'),
         "compilation errors": RegexStat(r'error: (.+)'),
         "assertions": RegexStat(r'(Assertion.+failed\.)'),
-        "unreachable": RegexStat(r'UNREACHABLE executed at (.+)')
+        "unreachable": RegexStat(r'UNREACHABLE executed at (.+)'),
+        "crashes": RegexStat(r'(PLEASE submit a bug report)')
     })
     if not os.path.exists(path):
         return 0, statistics
@@ -501,8 +502,7 @@ def post_process_project(project: dict, project_dir: str, config: dict,
             if stats["Number of %s" % name] > 0:
                 top = ["%s [%d]" % x for x in stat.counter.most_common(5)]
                 stats["Top %s" % name] = "<br>\n".join(top)
-        fatal_errors += sum(failure_stats["assertions"].counter.values()) + \
-            sum(failure_stats["unreachable"].counter.values())
+        fatal_errors += sum(failure_stats["crashes"].counter.values())
         stats["Lines of code"] = project.get("LOC", '?')
 
         disk_usage = 0
