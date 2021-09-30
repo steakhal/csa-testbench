@@ -241,7 +241,7 @@ def log_project(project: dict, project_dir: str, num_jobs: int) -> bool:
         project['configure_command'] = \
             project['configure_command'].replace("$JOBS", str(num_jobs))
         _, _, _ = run_command(project['configure_command'],
-                              True, project_dir, shell=True)
+                              True, project_dir, shell=True, env=os.environ)
     if 'make_command' in project:
         build_sys = 'userprovided'
     else:
