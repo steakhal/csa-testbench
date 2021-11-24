@@ -100,8 +100,9 @@ def summ_stats_on_file(filename: str, stat_map: dict, per_helper: dict,
         m = memory_pattern.search(line)
         if m:
             stat_val = int(m.group(1).strip())
-            stat_name = "Peak memory usage"
-            stat_map[stat_name] = max(stat_map[stat_name], int(stat_val))
+            stat_map["tu-count"] += 1
+            stat_map["Peak memory usage"] = max(stat_map["Peak memory usage"], int(stat_val))
+            stat_map["Avg memory usage"] += int(stat_val)
             continue
         m = timer_pattern.search(line) if "analyzer total time" in line else None
         if m:

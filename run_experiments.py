@@ -472,6 +472,7 @@ def post_process_project(project: dict, project_dir: str, config: dict,
 
         # Statistics from the Analyzer engine (if enabled).
         stats = summ_stats(stats_dir, False)
+        stats["Avg memory usage"] /= stats["tu-count"]
 
         # Additional statistics.
         stats["Analyzer version"] = run_config["analyzer_version"]
