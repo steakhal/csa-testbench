@@ -359,10 +359,10 @@ def check_project(project: dict, project_dir: str, config: dict,
 
         logging.info("[%s] Done. Storing results...", name)
         if config["CodeChecker"]["url"]:
-            cmd = "CodeChecker store '%s' --url '%s' -n %s " \
+            cmd = "CodeChecker store '%s' --url '%s' -n '%s' " \
                   % (result_path, config["CodeChecker"]["url"], name)
             if tag:
-                cmd += " --tag %s " % tag
+                cmd += " --tag '%s' " % tag
             cmd += collect_args("store_args", conf_sources)
             run_command(cmd, print_error=True, env=env)
             logging.info("[%s] Results stored.", name)
