@@ -255,8 +255,8 @@ def log_project(project: dict, project_dir: str, num_jobs: int) -> bool:
               % (binary_dir, project_dir)
         failed, _, _ = run_command(cmd, True, binary_dir)
     elif build_sys == 'makefile':
-        cmd = "CodeChecker log -b 'make' -o \"%s\"" \
-              % (json_path)
+        cmd = "CodeChecker log -b 'make -j%d' -o \"%s\"" \
+              % (num_jobs, json_path)
         failed, _, _ = run_command(cmd, True, project_dir)
     elif build_sys == 'userprovided':
         if not project['make_command']:
