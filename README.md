@@ -221,6 +221,7 @@ the reports will not be uploaded/stored anywhere.
     {
       "name": "original",
       "clang_sa_args": "",
+      "clang_tidy_args": "",
       "analyze_args": "",
       "store_args": "",
       "clang_path": ""
