@@ -315,16 +315,21 @@ def check_project(project: dict, project_dir: str, config: dict,
     if "configurations" not in project:
         project["configurations"] = config.get("configurations",
                                                [{"name": ""}])
+
+    skipfile_content = "\n".join(project.get("skip", [])).strip()
     _, skippath = tempfile.mkstemp()
     with open(skippath, 'w', encoding="utf-8", errors="ignore") \
             as skipfile:
-        skipfile.write("\n".join(project.get("skip", [])))
+        skipfile.write(skipfile_content)
+
     for run_config in project["configurations"]:
         result_dir = "cc_results"
         if run_config["name"]:
             result_dir += "_" + run_config["name"]
         result_path = os.path.join(project_dir, result_dir)
         run_config["result_path"] = result_path
+
+        clang_sa_args_content = ""
         args_file, filename = tempfile.mkstemp(text=True)
         with open(args_file, 'w') as args:
             if run_config.get("coverage", False):
@@ -333,12 +338,14 @@ def check_project(project: dict, project_dir: str, config: dict,
                 args.write(" -Xclang -analyzer-config "
                            "-Xclang record-coverage=%s " % coverage_dir)
             conf_sources = [config["CodeChecker"], project, run_config]
-            args.write(collect_args("clang_sa_args", conf_sources))
+            clang_sa_args_content = collect_args("clang_sa_args", conf_sources)
+            args.write(clang_sa_args_content)
 
+        tidy_args_content = collect_args("clang_tidy_args", conf_sources).strip()
         tidy_args_file, tidy_args_filename = tempfile.mkstemp(text=True)
         with open(tidy_args_file, 'w') as args:
             conf_sources = [config["CodeChecker"], project, run_config]
-            args.write(collect_args("clang_tidy_args", conf_sources))
+            args.write(tidy_args_content)
 
         tag = project.get("tag")
         name = project["name"]
@@ -358,9 +365,16 @@ def check_project(project: dict, project_dir: str, config: dict,
         cmd = ("CodeChecker analyze '%s' -j%d -o '%s' -q " +
                "--analyzers %s --capture-analysis-output") \
             % (json_path, num_jobs, result_path, analyzers)
-        cmd += " --saargs %s " % filename
-        cmd += " --tidyargs %s " % tidy_args_filename
-        cmd += " --skip %s " % skippath
+
+        if clang_sa_args_content:
+            cmd += " --saargs %s " % filename
+
+        if tidy_args_content:
+            cmd += " --tidyargs %s " % tidy_args_filename
+
+        if skipfile_content:
+            cmd += " --skip %s " % skippath
+
         cmd += collect_args("analyze_args", conf_sources)
         run_command(cmd, print_error=True, env=env)
 
