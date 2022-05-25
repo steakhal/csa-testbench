@@ -372,8 +372,12 @@ def check_project(project: dict, project_dir: str, config: dict,
         if tidy_args_content:
             cmd += " --tidyargs %s " % tidy_args_filename
 
+        # The '--file FILE...' and '--skip SKIPFILE' cannot be passed together,
+        # former should have the precedence over the latter.
         if skipfile_content:
-            cmd += " --skip %s " % skippath
+            if not run_config.get("analyze_args") or \
+               not "--file " in run_config["analyze_args"]:
+                cmd += " --skip %s " % skippath
 
         cmd += collect_args("analyze_args", conf_sources)
         run_command(cmd, print_error=True, env=env)
